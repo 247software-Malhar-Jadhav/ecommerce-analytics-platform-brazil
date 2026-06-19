@@ -1,0 +1,37 @@
+{
+  "project": "ecommerce-analytics-platform-brazil",
+  "description": "Olist Brazilian e-commerce medallion lakehouse configuration. Edit storage_account / container before deployment.",
+  "environment": {
+    "catalog": "ecommerce",
+    "bronze_schema": "bronze",
+    "silver_schema": "silver",
+    "gold_schema": "gold"
+  },
+  "storage": {
+    "_comment": "ADLS Gen2. abfss paths are used by Databricks; ADF writes raw CSV into the landing container.",
+    "storage_account": "<your_adls_account>",
+    "landing_container": "landing",
+    "bronze_container": "bronze",
+    "silver_container": "silver",
+    "gold_container": "gold",
+    "landing_path": "abfss://landing@<your_adls_account>.dfs.core.windows.net/olist",
+    "bronze_path": "abfss://bronze@<your_adls_account>.dfs.core.windows.net",
+    "silver_path": "abfss://silver@<your_adls_account>.dfs.core.windows.net",
+    "gold_path": "abfss://gold@<your_adls_account>.dfs.core.windows.net"
+  },
+  "scheduling": {
+    "daily_trigger_time": "07:00",
+    "timezone": "America/Sao_Paulo"
+  },
+  "sources": [
+    { "name": "customers",            "file": "olist_customers_dataset.csv",            "pk": ["customer_id"],            "load_type": "incremental", "gold_target": "dim_customer",    "scd": "SCD1" },
+    { "name": "orders",               "file": "olist_orders_dataset.csv",               "pk": ["order_id"],               "load_type": "incremental", "gold_target": "fact_orders",     "scd": "NA"   },
+    { "name": "order_items",          "file": "olist_order_items_dataset.csv",          "pk": ["order_id","order_item_id"], "load_type": "incremental", "gold_target": "fact_orders",   "scd": "NA"   },
+    { "name": "payments",             "file": "olist_order_payments_dataset.csv",       "pk": ["order_id","payment_sequential"], "load_type": "incremental", "gold_target": "fact_orders", "scd": "NA" },
+    { "name": "reviews",              "file": "olist_order_reviews_dataset.csv",        "pk": ["review_id"],              "load_type": "incremental", "gold_target": "fact_orders",     "scd": "NA"   },
+    { "name": "products",             "file": "olist_products_dataset.csv",             "pk": ["product_id"],             "load_type": "incremental", "gold_target": "dim_product",     "scd": "SCD1" },
+    { "name": "sellers",              "file": "olist_sellers_dataset.csv",              "pk": ["seller_id"],              "load_type": "incremental", "gold_target": "dim_seller",      "scd": "SCD2" },
+    { "name": "geolocation",          "file": "olist_geolocation_dataset.csv",          "pk": ["geolocation_zip_code_prefix"], "load_type": "full", "gold_target": "dim_geolocation", "scd": "SCD1" },
+    { "name": "category_translation", "file": "product_category_name_translation.csv",  "pk": ["product_category_name"],  "load_type": "full",        "gold_target": "dim_category",    "scd": "SCD0" }
+  ]
+}

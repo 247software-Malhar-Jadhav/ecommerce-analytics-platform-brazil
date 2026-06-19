@@ -1,0 +1,8 @@
+# Runtime dependencies for the E-Commerce Analytics Platform (Brazil)
+# On Azure Databricks these come pre-installed in the Databricks Runtime (DBR 13.3 LTS+).
+# This file is provided for LOCAL development / unit testing against a local Spark + Delta.
+
+pyspark==3.5.1
+delta-spark==3.2.0
+pytest==8.2.0
+python-dateutil==2.9.0
