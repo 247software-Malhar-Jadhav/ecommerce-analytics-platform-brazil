@@ -1,0 +1,24 @@
+{
+  "name": "tr_daily_7am",
+  "type": "Microsoft.DataFactory/factories/triggers",
+  "properties": {
+    "description": "Fires the medallion pipeline every day at 07:00 (America/Sao_Paulo). See docs/04_pdf_improvements.md re: the 7AM vs 7PM discrepancy in the spec.",
+    "type": "ScheduleTrigger",
+    "typeProperties": {
+      "recurrence": {
+        "frequency": "Day",
+        "interval": 1,
+        "startTime": "2026-01-01T07:00:00",
+        "timeZone": "E. South America Standard Time",
+        "schedule": { "hours": [ 7 ], "minutes": [ 0 ] }
+      }
+    },
+    "pipelines": [
+      {
+        "pipelineReference": { "referenceName": "pl_ecommerce_medallion_daily", "type": "PipelineReference" },
+        "parameters": {}
+      }
+    ],
+    "runtimeState": "Stopped"
+  }
+}

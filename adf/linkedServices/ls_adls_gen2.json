@@ -1,0 +1,16 @@
+{
+  "name": "ls_adls_gen2",
+  "type": "Microsoft.DataFactory/factories/linkedservices",
+  "properties": {
+    "description": "ADLS Gen2 lakehouse storage (landing/bronze/silver/gold containers). Auth via Key Vault account key.",
+    "type": "AzureBlobFS",
+    "typeProperties": {
+      "url": "https://<your_adls_account>.dfs.core.windows.net/",
+      "accountKey": {
+        "type": "AzureKeyVaultSecret",
+        "store": { "referenceName": "ls_keyvault", "type": "LinkedServiceReference" },
+        "secretName": "adls-account-key"
+      }
+    }
+  }
+}

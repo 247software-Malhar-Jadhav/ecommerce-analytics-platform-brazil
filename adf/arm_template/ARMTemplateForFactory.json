@@ -1,0 +1,87 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "comment": "Representative ARM template for the ecommerce medallion Data Factory. Deploys the factory and its linked services, datasets, pipeline and trigger. Replace the placeholder parameters before deployment. When using ADF Git integration, the canonical source is the adf/ folder and the 'Publish' button regenerates this template into the adf_publish branch."
+  },
+  "parameters": {
+    "factoryName":        { "type": "string", "defaultValue": "adf-ecommerce-analytics" },
+    "adlsAccountUrl":     { "type": "string", "defaultValue": "https://<your_adls_account>.dfs.core.windows.net/" },
+    "databricksDomain":   { "type": "string", "defaultValue": "https://<your-workspace>.azuredatabricks.net" },
+    "databricksWorkspaceResourceId": { "type": "string" },
+    "keyVaultBaseUrl":    { "type": "string", "defaultValue": "https://<your-keyvault>.vault.azure.net/" }
+  },
+  "variables": {
+    "factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+  },
+  "resources": [
+    {
+      "name": "[concat(parameters('factoryName'), '/ls_keyvault')]",
+      "type": "Microsoft.DataFactory/factories/linkedServices",
+      "apiVersion": "2018-06-01",
+      "properties": {
+        "type": "AzureKeyVault",
+        "typeProperties": { "baseUrl": "[parameters('keyVaultBaseUrl')]" }
+      }
+    },
+    {
+      "name": "[concat(parameters('factoryName'), '/ls_adls_gen2')]",
+      "type": "Microsoft.DataFactory/factories/linkedServices",
+      "apiVersion": "2018-06-01",
+      "dependsOn": [ "[concat(variables('factoryId'), '/linkedServices/ls_keyvault')]" ],
+      "properties": {
+        "type": "AzureBlobFS",
+        "typeProperties": {
+          "url": "[parameters('adlsAccountUrl')]",
+          "accountKey": {
+            "type": "AzureKeyVaultSecret",
+            "store": { "referenceName": "ls_keyvault", "type": "LinkedServiceReference" },
+            "secretName": "adls-account-key"
+          }
+        }
+      }
+    },
+    {
+      "name": "[concat(parameters('factoryName'), '/ls_azure_databricks')]",
+      "type": "Microsoft.DataFactory/factories/linkedServices",
+      "apiVersion": "2018-06-01",
+      "properties": {
+        "type": "AzureDatabricks",
+        "typeProperties": {
+          "domain": "[parameters('databricksDomain')]",
+          "authentication": "MSI",
+          "workspaceResourceId": "[parameters('databricksWorkspaceResourceId')]",
+          "newClusterNodeType": "Standard_DS3_v2",
+          "newClusterNumOfWorker": "2",
+          "newClusterVersion": "13.3.x-scala2.12"
+        }
+      }
+    },
+    {
+      "name": "[concat(parameters('factoryName'), '/tr_daily_7am')]",
+      "type": "Microsoft.DataFactory/factories/triggers",
+      "apiVersion": "2018-06-01",
+      "dependsOn": [ "[concat(variables('factoryId'), '/pipelines/pl_ecommerce_medallion_daily')]" ],
+      "properties": {
+        "type": "ScheduleTrigger",
+        "typeProperties": {
+          "recurrence": {
+            "frequency": "Day", "interval": 1,
+            "startTime": "2026-01-01T07:00:00",
+            "timeZone": "E. South America Standard Time",
+            "schedule": { "hours": [ 7 ], "minutes": [ 0 ] }
+          }
+        },
+        "pipelines": [
+          { "pipelineReference": { "referenceName": "pl_ecommerce_medallion_daily", "type": "PipelineReference" }, "parameters": {} }
+        ]
+      }
+    }
+  ],
+  "outputs": {
+    "note": {
+      "type": "string",
+      "value": "Datasets ds_source_csv / ds_landing_adls and pipeline pl_ecommerce_medallion_daily are defined under adf/datasets and adf/pipeline. Deploy them via ADF Git publish, or extend this template with their resource blocks."
+    }
+  }
+}

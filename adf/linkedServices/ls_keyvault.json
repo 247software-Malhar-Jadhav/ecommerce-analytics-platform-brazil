@@ -1,0 +1,11 @@
+{
+  "name": "ls_keyvault",
+  "type": "Microsoft.DataFactory/factories/linkedservices",
+  "properties": {
+    "description": "Azure Key Vault holding storage keys / connection strings. ADF authenticates with its managed identity.",
+    "type": "AzureKeyVault",
+    "typeProperties": {
+      "baseUrl": "https://<your-keyvault>.vault.azure.net/"
+    }
+  }
+}

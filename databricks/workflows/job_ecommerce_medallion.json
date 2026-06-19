@@ -1,0 +1,57 @@
+{
+  "name": "ecommerce_medallion_daily",
+  "description": "Daily medallion pipeline (Bronze -> Silver -> Gold -> DQ). Alternative orchestrator to ADF; the spec lists Databricks Workflows. Deploy with: databricks jobs create --json @job_ecommerce_medallion.json",
+  "tags": { "project": "ecommerce-analytics", "layer": "all" },
+  "schedule": {
+    "quartz_cron_expression": "0 0 7 * * ?",
+    "timezone_id": "America/Sao_Paulo",
+    "pause_status": "UNPAUSED"
+  },
+  "max_concurrent_runs": 1,
+  "job_clusters": [
+    {
+      "job_cluster_key": "medallion_cluster",
+      "new_cluster": {
+        "spark_version": "13.3.x-scala2.12",
+        "node_type_id": "Standard_DS3_v2",
+        "num_workers": 2,
+        "spark_conf": {
+          "spark.databricks.delta.optimizeWrite.enabled": "true",
+          "spark.databricks.delta.autoCompact.enabled": "true"
+        }
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_key": "setup",
+      "job_cluster_key": "medallion_cluster",
+      "notebook_task": { "notebook_path": "/Repos/ecommerce/ecommerce-analytics-platform-brazil/notebooks/00_setup/00_create_catalog_schemas" }
+    },
+    {
+      "task_key": "bronze",
+      "depends_on": [ { "task_key": "setup" } ],
+      "job_cluster_key": "medallion_cluster",
+      "notebook_task": { "notebook_path": "/Repos/ecommerce/ecommerce-analytics-platform-brazil/notebooks/00_setup/run_bronze_all" }
+    },
+    {
+      "task_key": "silver",
+      "depends_on": [ { "task_key": "bronze" } ],
+      "job_cluster_key": "medallion_cluster",
+      "notebook_task": { "notebook_path": "/Repos/ecommerce/ecommerce-analytics-platform-brazil/notebooks/00_setup/run_silver_all" }
+    },
+    {
+      "task_key": "gold",
+      "depends_on": [ { "task_key": "silver" } ],
+      "job_cluster_key": "medallion_cluster",
+      "notebook_task": { "notebook_path": "/Repos/ecommerce/ecommerce-analytics-platform-brazil/notebooks/00_setup/run_gold_all" }
+    },
+    {
+      "task_key": "data_quality",
+      "depends_on": [ { "task_key": "gold" } ],
+      "job_cluster_key": "medallion_cluster",
+      "notebook_task": { "notebook_path": "/Repos/ecommerce/ecommerce-analytics-platform-brazil/notebooks/05_quality/data_quality_checks" }
+    }
+  ],
+  "email_notifications": { "on_failure": [ "malhar.jadhav@247software.com" ] }
+}

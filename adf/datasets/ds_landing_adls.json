@@ -1,0 +1,25 @@
+{
+  "name": "ds_landing_adls",
+  "type": "Microsoft.DataFactory/factories/datasets",
+  "properties": {
+    "description": "Sink CSV in the ADLS Gen2 'landing' container under olist/. Databricks Bronze reads from here.",
+    "linkedServiceName": { "referenceName": "ls_adls_gen2", "type": "LinkedServiceReference" },
+    "parameters": {
+      "fileName": { "type": "String" }
+    },
+    "type": "DelimitedText",
+    "typeProperties": {
+      "location": {
+        "type": "AzureBlobFSLocation",
+        "fileSystem": "landing",
+        "folderPath": "olist",
+        "fileName": { "value": "@dataset().fileName", "type": "Expression" }
+      },
+      "columnDelimiter": ",",
+      "escapeChar": "\"",
+      "quoteChar": "\"",
+      "firstRowAsHeader": true
+    },
+    "schema": []
+  }
+}

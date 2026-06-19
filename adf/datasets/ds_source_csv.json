@@ -1,0 +1,25 @@
+{
+  "name": "ds_source_csv",
+  "type": "Microsoft.DataFactory/factories/datasets",
+  "properties": {
+    "description": "Parameterised source CSV in the blob landing drop. fileName is supplied per ForEach iteration.",
+    "linkedServiceName": { "referenceName": "ls_source_blob", "type": "LinkedServiceReference" },
+    "parameters": {
+      "fileName": { "type": "String" },
+      "container": { "type": "String", "defaultValue": "source-drop" }
+    },
+    "type": "DelimitedText",
+    "typeProperties": {
+      "location": {
+        "type": "AzureBlobStorageLocation",
+        "container": { "value": "@dataset().container", "type": "Expression" },
+        "fileName": { "value": "@dataset().fileName", "type": "Expression" }
+      },
+      "columnDelimiter": ",",
+      "escapeChar": "\"",
+      "quoteChar": "\"",
+      "firstRowAsHeader": true
+    },
+    "schema": []
+  }
+}

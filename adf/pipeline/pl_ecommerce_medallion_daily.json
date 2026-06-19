@@ -1,0 +1,110 @@
+{
+  "name": "pl_ecommerce_medallion_daily",
+  "type": "Microsoft.DataFactory/factories/pipelines",
+  "properties": {
+    "description": "End-to-end daily pipeline: copy 9 Olist CSVs from source drop -> ADLS landing, then run Bronze -> Silver -> Gold -> Data Quality on Azure Databricks.",
+    "parameters": {
+      "sourceFiles": {
+        "type": "Array",
+        "defaultValue": [
+          "olist_customers_dataset.csv",
+          "olist_orders_dataset.csv",
+          "olist_order_items_dataset.csv",
+          "olist_order_payments_dataset.csv",
+          "olist_order_reviews_dataset.csv",
+          "olist_products_dataset.csv",
+          "olist_sellers_dataset.csv",
+          "olist_geolocation_dataset.csv",
+          "product_category_name_translation.csv"
+        ]
+      },
+      "notebookBasePath": {
+        "type": "String",
+        "defaultValue": "/Repos/ecommerce/ecommerce-analytics-platform-brazil/notebooks"
+      }
+    },
+    "activities": [
+      {
+        "name": "ForEach_CopyToLanding",
+        "type": "ForEach",
+        "typeProperties": {
+          "items": { "value": "@pipeline().parameters.sourceFiles", "type": "Expression" },
+          "isSequential": false,
+          "batchCount": 4,
+          "activities": [
+            {
+              "name": "Copy_CSV_to_Landing",
+              "type": "Copy",
+              "policy": { "timeout": "0.01:00:00", "retry": 2, "retryIntervalInSeconds": 30 },
+              "typeProperties": {
+                "source": { "type": "DelimitedTextSource", "storeSettings": { "type": "AzureBlobStorageReadSettings", "recursive": false } },
+                "sink": { "type": "DelimitedTextSink", "storeSettings": { "type": "AzureBlobFSWriteSettings" } },
+                "enableStaging": false
+              },
+              "inputs": [
+                { "referenceName": "ds_source_csv", "type": "DatasetReference",
+                  "parameters": { "fileName": { "value": "@item()", "type": "Expression" } } }
+              ],
+              "outputs": [
+                { "referenceName": "ds_landing_adls", "type": "DatasetReference",
+                  "parameters": { "fileName": { "value": "@item()", "type": "Expression" } } }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "name": "Setup_Catalog_Schemas",
+        "type": "DatabricksNotebook",
+        "dependsOn": [ { "activity": "ForEach_CopyToLanding", "dependencyConditions": [ "Succeeded" ] } ],
+        "policy": { "timeout": "0.02:00:00", "retry": 1 },
+        "typeProperties": {
+          "notebookPath": { "value": "@concat(pipeline().parameters.notebookBasePath, '/00_setup/00_create_catalog_schemas')", "type": "Expression" }
+        },
+        "linkedServiceName": { "referenceName": "ls_azure_databricks", "type": "LinkedServiceReference" }
+      },
+      {
+        "name": "Run_Bronze",
+        "type": "DatabricksNotebook",
+        "dependsOn": [ { "activity": "Setup_Catalog_Schemas", "dependencyConditions": [ "Succeeded" ] } ],
+        "policy": { "timeout": "0.03:00:00", "retry": 1 },
+        "typeProperties": {
+          "notebookPath": { "value": "@concat(pipeline().parameters.notebookBasePath, '/00_setup/run_bronze_all')", "type": "Expression" },
+          "baseParameters": { "run_date": { "value": "@formatDateTime(pipeline().TriggerTime, 'yyyy-MM-dd')", "type": "Expression" } }
+        },
+        "linkedServiceName": { "referenceName": "ls_azure_databricks", "type": "LinkedServiceReference" }
+      },
+      {
+        "name": "Run_Silver",
+        "type": "DatabricksNotebook",
+        "dependsOn": [ { "activity": "Run_Bronze", "dependencyConditions": [ "Succeeded" ] } ],
+        "policy": { "timeout": "0.03:00:00", "retry": 1 },
+        "typeProperties": {
+          "notebookPath": { "value": "@concat(pipeline().parameters.notebookBasePath, '/00_setup/run_silver_all')", "type": "Expression" }
+        },
+        "linkedServiceName": { "referenceName": "ls_azure_databricks", "type": "LinkedServiceReference" }
+      },
+      {
+        "name": "Run_Gold",
+        "type": "DatabricksNotebook",
+        "dependsOn": [ { "activity": "Run_Silver", "dependencyConditions": [ "Succeeded" ] } ],
+        "policy": { "timeout": "0.03:00:00", "retry": 1 },
+        "typeProperties": {
+          "notebookPath": { "value": "@concat(pipeline().parameters.notebookBasePath, '/00_setup/run_gold_all')", "type": "Expression" }
+        },
+        "linkedServiceName": { "referenceName": "ls_azure_databricks", "type": "LinkedServiceReference" }
+      },
+      {
+        "name": "Run_DataQuality",
+        "type": "DatabricksNotebook",
+        "dependsOn": [ { "activity": "Run_Gold", "dependencyConditions": [ "Succeeded" ] } ],
+        "policy": { "timeout": "0.01:00:00", "retry": 0 },
+        "typeProperties": {
+          "notebookPath": { "value": "@concat(pipeline().parameters.notebookBasePath, '/05_quality/data_quality_checks')", "type": "Expression" }
+        },
+        "linkedServiceName": { "referenceName": "ls_azure_databricks", "type": "LinkedServiceReference" }
+      }
+    ],
+    "annotations": [ "ecommerce", "medallion", "daily" ]
+  }
+}

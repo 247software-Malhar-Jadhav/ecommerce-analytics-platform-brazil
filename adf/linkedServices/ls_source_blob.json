@@ -1,0 +1,18 @@
+{
+  "name": "ls_source_blob",
+  "type": "Microsoft.DataFactory/factories/linkedservices",
+  "properties": {
+    "description": "Source landing zone where the daily Olist CSV files arrive (Azure Blob / SFTP drop). Auth via Key Vault.",
+    "type": "AzureBlobStorage",
+    "typeProperties": {
+      "serviceEndpoint": "https://@{linkedService().storageAccount}.blob.core.windows.net/",
+      "accountKind": "StorageV2",
+      "sasUri": null,
+      "connectionString": {
+        "type": "AzureKeyVaultSecret",
+        "store": { "referenceName": "ls_keyvault", "type": "LinkedServiceReference" },
+        "secretName": "source-blob-connection-string"
+      }
+    }
+  }
+}

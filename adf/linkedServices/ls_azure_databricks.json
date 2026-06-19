@@ -1,0 +1,21 @@
+{
+  "name": "ls_azure_databricks",
+  "type": "Microsoft.DataFactory/factories/linkedservices",
+  "properties": {
+    "description": "Azure Databricks workspace running the medallion notebooks on a job cluster.",
+    "type": "AzureDatabricks",
+    "typeProperties": {
+      "domain": "https://<your-workspace>.azuredatabricks.net",
+      "authentication": "MSI",
+      "workspaceResourceId": "/subscriptions/<sub-id>/resourceGroups/<rg>/providers/Microsoft.Databricks/workspaces/<workspace>",
+      "newClusterNodeType": "Standard_DS3_v2",
+      "newClusterNumOfWorker": "2",
+      "newClusterSparkConf": {
+        "spark.databricks.delta.optimizeWrite.enabled": "true",
+        "spark.databricks.delta.autoCompact.enabled": "true"
+      },
+      "newClusterVersion": "13.3.x-scala2.12",
+      "clusterOption": "Fixed"
+    }
+  }
+}
