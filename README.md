@@ -24,7 +24,10 @@ seller location history, customer retention, seasonal trends, …).
 
 📖 Read the docs in [`docs/`](docs/): **[HLD](docs/01_architecture_hld.md)** ·
 **[LLD](docs/02_lld.md)** · **[Code flow & file paths](docs/03_code_flow_and_file_paths.md)** ·
-**[Spec improvements](docs/04_pdf_improvements.md)**.
+**[Spec improvements](docs/04_pdf_improvements.md)** ·
+**[End-to-end study notes](docs/05_project_notes_end_to_end.md)** ·
+**[Pipeline designs & workarounds](docs/06_pipeline_designs_and_workarounds.md)** ·
+**[Interview Q&A bank](docs/07_interview_qa.md)**.
 
 > 🧑‍🏫 **Learning-friendly:** every notebook and SQL file is **heavily commented inline** —
 > each block explains *what* it does and *why* (the data-engineering reasoning). Read the code
