@@ -26,10 +26,15 @@
 
 # COMMAND ----------
 
-dbutils.widgets.text("dataset", "customers", "Source dataset name")
+# Fully dynamic: pass EITHER the short dataset name (e.g. "customers")
+# OR the raw file name (e.g. "olist_customers_dataset.csv"). The notebook
+# resolves the other values from config/pipeline_config.json automatically.
+dbutils.widgets.text("dataset", "customers", "Dataset name OR raw file name")
+dbutils.widgets.text("file_name", "", "Raw file name (optional; overrides 'dataset')")
 dbutils.widgets.text("run_date", "", "Logical run date (yyyy-MM-dd, optional)")
 
-dataset = dbutils.widgets.get("dataset")
+dataset_input = dbutils.widgets.get("dataset").strip()
+file_input = dbutils.widgets.get("file_name").strip()
 run_date = dbutils.widgets.get("run_date")
 
 cfg = load_config()
@@ -37,16 +42,34 @@ catalog = cfg["environment"]["catalog"]
 bronze_schema = cfg["environment"]["bronze_schema"]
 landing_path = cfg["storage"]["landing_path"]
 
-source = next((s for s in cfg["sources"] if s["name"] == dataset), None)
-if source is None:
-    raise ValueError(f"Unknown dataset '{dataset}'. Check config/pipeline_config.json.")
 
+def resolve_source(cfg, dataset_input, file_input):
+    """Resolve a config source from EITHER a dataset name OR a raw file name.
+
+    Priority: explicit file_name widget > a dataset value that is itself a file name
+    > a dataset value that is a logical name. This is what makes the notebook
+    'put a file name and it lands in Bronze' dynamic, while still resolving the
+    explicit schema + target table the file needs.
+    """
+    key = file_input or dataset_input
+    for s in cfg["sources"]:
+        # match on logical name OR on the configured file name (with/without .csv)
+        if key == s["name"] or key == s["file"] or key == s["file"].replace(".csv", ""):
+            return s
+    raise ValueError(
+        f"Could not resolve '{key}'. Pass a dataset name {[s['name'] for s in cfg['sources']]} "
+        f"or a file name listed in config/pipeline_config.json."
+    )
+
+
+source = resolve_source(cfg, dataset_input, file_input)
+dataset = source["name"]                 # canonical logical name (also the bronze table name)
 schema = SOURCE_SCHEMAS[dataset]
 source_file = source["file"]
 src_path = f"{landing_path}/{source_file}"
 target_table = f"{catalog}.{bronze_schema}.{dataset}"
 
-print(f"Ingesting '{dataset}'\n  from : {src_path}\n  into : {target_table}")
+print(f"Ingesting '{dataset}' (file: {source_file})\n  from : {src_path}\n  into : {target_table}")
 
 # COMMAND ----------
 

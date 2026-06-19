@@ -18,7 +18,10 @@ partitioning and data-quality rules. Pairs with `docs/01_architecture_hld.md`.
 
 ## 2. Bronze Layer (`notebooks/01_bronze/bronze_ingestion.py`)
 
-Parametrised by the `dataset` widget; one notebook ingests all nine sources.
+Parametrised; one notebook ingests all nine sources. You pass **either** the short
+`dataset` name (e.g. `customers`) **or** a raw `file_name` (e.g. `olist_customers_dataset.csv`)
+— `resolve_source()` looks the other values up from `pipeline_config.json`, so dropping in a
+file name lands it in the right Bronze table with the right schema automatically.
 
 | Step | Action |
 |------|--------|
