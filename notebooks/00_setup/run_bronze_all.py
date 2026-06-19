@@ -12,14 +12,19 @@
 # COMMAND ----------
 
 import json
+# Load config and prepare a dict to collect each dataset's result for reporting.
 cfg = load_config()
 results = {}
+# Loop over every source defined in config and run the SAME bronze notebook for each.
 for s in cfg["sources"]:
     name = s["name"]
     print(f"==> Bronze ingest: {name}")
+    # Run the generic ingestion notebook, passing the dataset name as a parameter (widget).
+    # 3600 = timeout in seconds; the notebook returns a string via dbutils.notebook.exit(...).
     out = dbutils.notebook.run("../01_bronze/bronze_ingestion", 3600, {"dataset": name})
-    results[name] = out
+    results[name] = out          # remember this dataset's returned status
     print(f"    {out}")
 
+# Print a combined summary, then return it so a parent job/orchestrator can read it.
 print(json.dumps(results, indent=2))
 dbutils.notebook.exit(json.dumps(results))

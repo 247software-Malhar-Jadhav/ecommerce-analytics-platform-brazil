@@ -5,12 +5,18 @@
 -- Catalog/schema: ecommerce.gold
 -- =====================================================================
 
+-- Create the Unity Catalog container and the Gold schema if they don't exist yet.
+-- IF NOT EXISTS makes this safe to re-run (idempotent).
 CREATE CATALOG IF NOT EXISTS ecommerce;
 CREATE SCHEMA IF NOT EXISTS ecommerce.gold;
 
 -- ------------------------- DIMENSIONS --------------------------------
+-- Dimensions hold descriptive "who/what/where/when" attributes. Each has a
+-- surrogate key (xx_sk) that the fact table joins on.
 
 -- dim_customer (SCD-1)
+-- SCD-1 = "overwrite": when a customer's details change we just update the row,
+-- keeping no history. The surrogate key is hashed from the business key.
 CREATE TABLE IF NOT EXISTS ecommerce.gold.dim_customer (
   customer_sk              BIGINT   COMMENT 'Surrogate key = xxhash64(customer_id)',
   customer_id              STRING   COMMENT 'Business key (PK)',
@@ -23,6 +29,8 @@ CREATE TABLE IF NOT EXISTS ecommerce.gold.dim_customer (
 COMMENT 'SCD-1 customer dimension';
 
 -- dim_product (SCD-1)
+-- Product attributes, also overwrite-on-change. Carries both the original Portuguese
+-- category name and its English translation for reporting.
 CREATE TABLE IF NOT EXISTS ecommerce.gold.dim_product (
   product_sk                     BIGINT,
   product_id                     STRING COMMENT 'Business key (PK)',
@@ -40,6 +48,9 @@ CREATE TABLE IF NOT EXISTS ecommerce.gold.dim_product (
 COMMENT 'SCD-1 product dimension with English category';
 
 -- dim_seller (SCD-2)
+-- SCD-2 = "keep history": each change of seller location creates a NEW row instead of
+-- overwriting. effective_from/effective_to bound the validity period and is_current
+-- flags the latest row. This lets us see what a seller's location was at any past date.
 CREATE TABLE IF NOT EXISTS ecommerce.gold.dim_seller (
   seller_sk              BIGINT  COMMENT 'Surrogate key, unique per version',
   seller_id              STRING  COMMENT 'Business key',
@@ -53,6 +64,7 @@ CREATE TABLE IF NOT EXISTS ecommerce.gold.dim_seller (
 COMMENT 'SCD-2 seller dimension tracking location history';
 
 -- dim_category (SCD-0 static)
+-- SCD-0 = "never changes": a fixed lookup mapping Portuguese category names to English.
 CREATE TABLE IF NOT EXISTS ecommerce.gold.dim_category (
   category_sk                    BIGINT,
   product_category_name          STRING,
@@ -62,6 +74,8 @@ CREATE TABLE IF NOT EXISTS ecommerce.gold.dim_category (
 COMMENT 'SCD-0 static category reference';
 
 -- dim_date (derived)
+-- A pre-built calendar table. Generated (not loaded from source) so queries can group
+-- by year/quarter/month/weekday without recomputing date parts every time.
 CREATE TABLE IF NOT EXISTS ecommerce.gold.dim_date (
   date_id       INT  COMMENT 'yyyyMMdd surrogate key',
   date          DATE,
@@ -79,6 +93,7 @@ CREATE TABLE IF NOT EXISTS ecommerce.gold.dim_date (
 COMMENT 'Derived calendar dimension';
 
 -- dim_geolocation (optional, SCD-1)
+-- Optional lookup of zip-code prefix to lat/lng and city/state for mapping/geo analysis.
 CREATE TABLE IF NOT EXISTS ecommerce.gold.dim_geolocation (
   geolocation_sk              BIGINT,
   geolocation_zip_code_prefix INT,
@@ -91,8 +106,14 @@ CREATE TABLE IF NOT EXISTS ecommerce.gold.dim_geolocation (
 COMMENT 'Optional geolocation dimension';
 
 -- ---------------------------- FACT -----------------------------------
+-- The fact table holds the measurable events (the numbers we sum/average) plus the
+-- foreign keys (surrogate keys) that link out to the dimensions above.
 
 -- fact_orders (grain: order line item)
+-- "Grain" = what one row means: here, one item line within an order. It stores both
+-- the raw measures (price, freight, payment_value, review, delivery_days) and the
+-- dimension keys. PARTITIONED BY order_year_month physically splits files by month so
+-- date-filtered queries scan less data.
 CREATE TABLE IF NOT EXISTS ecommerce.gold.fact_orders (
   order_id             STRING,
   order_item_id        INT,

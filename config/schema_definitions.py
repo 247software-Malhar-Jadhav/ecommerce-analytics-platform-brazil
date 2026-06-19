@@ -13,6 +13,10 @@
 
 # COMMAND ----------
 
+# Building blocks for declaring a schema by hand:
+#   StructType  = the whole table schema (a list of columns)
+#   StructField = one column: (name, data type, nullable?)
+#   StringType / IntegerType / ... = the column data types
 from pyspark.sql.types import (
     StructType, StructField, StringType, IntegerType, DoubleType, TimestampType,
 )
@@ -23,6 +27,7 @@ from pyspark.sql.types import (
 # so that Bronze never drops a row it cannot cast. Silver does the real casting.
 # ---------------------------------------------------------------------------
 
+# One row per customer record on an order (Olist links orders to a customer_id).
 CUSTOMERS_SCHEMA = StructType([
     StructField("customer_id", StringType(), True),
     StructField("customer_unique_id", StringType(), True),
@@ -31,6 +36,7 @@ CUSTOMERS_SCHEMA = StructType([
     StructField("customer_state", StringType(), True),
 ])
 
+# One row per order, including its status and the various delivery lifecycle timestamps.
 ORDERS_SCHEMA = StructType([
     StructField("order_id", StringType(), True),
     StructField("customer_id", StringType(), True),
@@ -42,6 +48,7 @@ ORDERS_SCHEMA = StructType([
     StructField("order_estimated_delivery_date", StringType(), True),
 ])
 
+# One row per line item within an order (an order can contain several products).
 ORDER_ITEMS_SCHEMA = StructType([
     StructField("order_id", StringType(), True),
     StructField("order_item_id", StringType(), True),                # cast -> int in Silver
@@ -52,6 +59,7 @@ ORDER_ITEMS_SCHEMA = StructType([
     StructField("freight_value", StringType(), True),                # strip "$" -> double in Silver
 ])
 
+# One row per payment on an order (an order may be paid in multiple sequential parts).
 PAYMENTS_SCHEMA = StructType([
     StructField("order_id", StringType(), True),
     StructField("payment_sequential", StringType(), True),           # cast -> int in Silver
@@ -60,6 +68,7 @@ PAYMENTS_SCHEMA = StructType([
     StructField("payment_value", StringType(), True),                # clean nulls/specials -> double in Silver
 ])
 
+# One row per customer review; comment fields are free text (may contain newlines/quotes).
 REVIEWS_SCHEMA = StructType([
     StructField("review_id", StringType(), True),
     StructField("order_id", StringType(), True),
@@ -70,6 +79,8 @@ REVIEWS_SCHEMA = StructType([
     StructField("review_answer_timestamp", StringType(), True),
 ])
 
+# One row per product, with category and physical dimensions.
+# Note: two source columns keep Olist's original "lenght" misspelling (kept as-is to match the file).
 PRODUCTS_SCHEMA = StructType([
     StructField("product_id", StringType(), True),
     StructField("product_category_name", StringType(), True),
@@ -82,6 +93,7 @@ PRODUCTS_SCHEMA = StructType([
     StructField("product_width_cm", StringType(), True),
 ])
 
+# One row per seller (marketplace merchant) with their location.
 SELLERS_SCHEMA = StructType([
     StructField("seller_id", StringType(), True),
     StructField("seller_zip_code_prefix", StringType(), True),
@@ -89,6 +101,7 @@ SELLERS_SCHEMA = StructType([
     StructField("seller_state", StringType(), True),
 ])
 
+# Maps zip-code prefixes to lat/lng coordinates and city/state (used to enrich locations).
 GEOLOCATION_SCHEMA = StructType([
     StructField("geolocation_zip_code_prefix", StringType(), True),
     StructField("geolocation_lat", StringType(), True),
@@ -97,12 +110,15 @@ GEOLOCATION_SCHEMA = StructType([
     StructField("geolocation_state", StringType(), True),
 ])
 
+# Translates Portuguese category names to English (a small lookup/reference table).
 CATEGORY_TRANSLATION_SCHEMA = StructType([
     StructField("product_category_name", StringType(), True),
     StructField("product_category_name_english", StringType(), True),
 ])
 
 # Registry consumed by the parametrised Bronze ingestion notebook.
+# Maps a short dataset name -> its schema, so one generic notebook can ingest any source
+# by looking its schema up here (instead of hard-coding a schema per notebook).
 SOURCE_SCHEMAS = {
     "customers": CUSTOMERS_SCHEMA,
     "orders": ORDERS_SCHEMA,

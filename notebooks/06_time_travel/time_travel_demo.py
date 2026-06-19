@@ -13,12 +13,13 @@
 
 # COMMAND ----------
 
+# Load config and build the fully qualified table names we will time-travel over.
 cfg = load_config()
 cat = cfg["environment"]["catalog"]
 gold = cfg["environment"]["gold_schema"]
 silver = cfg["environment"]["silver_schema"]
-fact = f"{cat}.{gold}.fact_orders"
-seller = f"{cat}.{gold}.dim_seller"
+fact = f"{cat}.{gold}.fact_orders"     # main fact table
+seller = f"{cat}.{gold}.dim_seller"    # SCD-2 dimension used for history demo
 
 # COMMAND ----------
 
@@ -26,6 +27,9 @@ seller = f"{cat}.{gold}.dim_seller"
 
 # COMMAND ----------
 
+# DESCRIBE HISTORY lists every commit (version) Delta has made to the table:
+# version number, timestamp, operation (WRITE/MERGE/etc). This is the audit log
+# that makes time travel possible.
 display(spark.sql(f"DESCRIBE HISTORY {fact}"))
 
 # COMMAND ----------
@@ -34,12 +38,15 @@ display(spark.sql(f"DESCRIBE HISTORY {fact}"))
 
 # COMMAND ----------
 
+# Find the newest version number by taking the MAX over the history table.
 latest_version = spark.sql(f"DESCRIBE HISTORY {fact}").agg(F.max("version")).collect()[0][0]
 print(f"Latest version: {latest_version}")
 
+# If there is a previous version, read both the previous and current snapshots
+# and compare row counts to see how many rows the most recent load added.
 if latest_version and latest_version > 0:
-    prev = read_delta_version(spark, fact, version=latest_version - 1)
-    curr = read_delta(spark, fact)
+    prev = read_delta_version(spark, fact, version=latest_version - 1)  # snapshot before last load
+    curr = read_delta(spark, fact)                                     # current snapshot
     print(f"Rows added in last load: {curr.count() - prev.count():,}")
 
 # COMMAND ----------

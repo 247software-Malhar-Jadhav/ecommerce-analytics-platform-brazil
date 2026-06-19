@@ -26,6 +26,11 @@ seller location history, customer retention, seasonal trends, …).
 **[LLD](docs/02_lld.md)** · **[Code flow & file paths](docs/03_code_flow_and_file_paths.md)** ·
 **[Spec improvements](docs/04_pdf_improvements.md)**.
 
+> 🧑‍🏫 **Learning-friendly:** every notebook and SQL file is **heavily commented inline** —
+> each block explains *what* it does and *why* (the data-engineering reasoning). Read the code
+> top-to-bottom alongside the LLD and you can follow the full Bronze → Silver → Gold logic
+> without prior context.
+
 ---
 
 ## 🗂 Repository structure

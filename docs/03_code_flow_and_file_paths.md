@@ -3,6 +3,15 @@
 A file-by-file map of the repository and the exact order in which code executes during a
 daily run. Use this as the navigation index for the codebase.
 
+> **How to read the code:** every `.py` notebook and `.sql` file is **richly commented inline**.
+> Markdown (`# MAGIC %md`) cells introduce each section, plain `#`/`--` comments explain the
+> *what* and *why* of individual lines, and the helper functions in
+> `notebooks/04_utils/common_functions.py` carry docstrings. Suggested reading order for a
+> newcomer: `04_utils/common_functions.py` → `config/schema_definitions.py` →
+> `01_bronze/bronze_ingestion.py` → a couple of `02_silver/silver_*.py` →
+> `03_gold/gold_dim_seller_scd2.py` (SCD-2) and `03_gold/gold_fact_orders.py` (fact) →
+> `05_quality/data_quality_checks.py` → `06_time_travel/time_travel_demo.py`.
+
 ---
 
 ## 1. Repository tree

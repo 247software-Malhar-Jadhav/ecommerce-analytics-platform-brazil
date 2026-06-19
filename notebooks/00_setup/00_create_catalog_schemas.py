@@ -13,19 +13,24 @@
 
 # COMMAND ----------
 
+# Load the project config (JSON) and pull out the names we need.
+# Keeping names in config (not hard-coded) lets us point at different environments easily.
 cfg = load_config()
-catalog = cfg["environment"]["catalog"]
-bronze = cfg["environment"]["bronze_schema"]
-silver = cfg["environment"]["silver_schema"]
-gold = cfg["environment"]["gold_schema"]
+catalog = cfg["environment"]["catalog"]          # top-level Unity Catalog container
+bronze = cfg["environment"]["bronze_schema"]     # schema for raw landed data
+silver = cfg["environment"]["silver_schema"]     # schema for cleaned/conformed data
+gold = cfg["environment"]["gold_schema"]         # schema for business-ready dims/facts
 
 # COMMAND ----------
 
+# "IF NOT EXISTS" makes this safe to re-run (idempotent): existing objects are left untouched.
+# Create the catalog first, then the three medallion-layer schemas inside it.
 spark.sql(f"CREATE CATALOG IF NOT EXISTS {catalog}")
 spark.sql(f"CREATE SCHEMA IF NOT EXISTS {catalog}.{bronze}")
 spark.sql(f"CREATE SCHEMA IF NOT EXISTS {catalog}.{silver}")
 spark.sql(f"CREATE SCHEMA IF NOT EXISTS {catalog}.{gold}")
 
+# Confirm what was created so the run output is easy to verify.
 print(f"Catalog '{catalog}' ready with schemas: {bronze}, {silver}, {gold}")
 display(spark.sql(f"SHOW SCHEMAS IN {catalog}"))
 
